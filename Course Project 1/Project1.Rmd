@@ -1,0 +1,66 @@
+---
+title: "Reproducible Research Project 1"
+author: "James Sheldon"
+date: "May 18, 2016"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+```
+
+## Reading the Data Into an R Object
+
+We begin by reading the data into the R object `activity`:
+
+```{r activity}
+activity <- read.table("./data/activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+```
+
+Let's take a look at the first few elements of `activity`:
+
+```{r}
+head(activity)
+```
+
+We can already see there are a number of missing values for `steps`. Let's get a bit more information on `activity`:
+
+```{r}
+str(activity)
+```
+
+This is a data frame object with 17,568 observations. It is disconcerting that there are so many missing values.  What percentage of the values are missing?
+
+```{r}
+mean(is.na(activity))
+```
+
+It appears that roughly 4.37% of the observations are missing steps data. For now we won't be concerned with this but it's nice to have that knowledge handy.  Finally, here's a summary of the data in `activity`:
+
+```{r}
+summary(activity, na.rm = TRUE)
+```
+
+The above summary suggests the overall mean number of steps is 37.38.  That seems very low and worth exploring further.  Let's summarize the data by days and find the mean number of steps taken by day.
+
+## What is the mean total number of steps taken per day?
+
+```{r mean_daily_steps}
+dailysumm <- summarize(group_by(activity, date), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+qplot(total.steps, data = dailysumm, geom = "histogram", color = date) + theme_bw() + xlab("Total Steps")+ylab("Frequency") + ggtitle("Daily Step Total Histogram")
+```
+
+From the histrogram we can see there are a total of ten days with zero steps recorded. Looking at a summary of our data table we see the following:
+
+```{r}
+summary(dailysumm)
+```
+
+The median steps taken on a daily basis is **10,395** while the mean steps taken on a daily basis is **9,354**.
+
+## What is the average daily activity pattern?
+
