@@ -18,7 +18,9 @@ library(dplyr)
 We begin by reading the data into the R object `activity`:
 
 ```{r activity}
+#setwd("~/GitHub/Reproducible_Reserach/Course Project 1")
 activity <- read.table("./data/activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+activity$date <- as.Date(activity$date)
 ```
 
 Let's take a look at the first few elements of `activity`:
@@ -51,7 +53,10 @@ The above summary suggests the overall mean number of steps is 37.38.  That seem
 
 ```{r mean_daily_steps}
 dailysumm <- summarize(group_by(activity, date), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
-qplot(total.steps, data = dailysumm, geom = "histogram", color = date) + theme_bw() + xlab("Total Steps")+ylab("Frequency") + ggtitle("Daily Step Total Histogram")
+
+plot(dailysumm$date, dailysumm$total.steps, type = "h", lwd = 4, col = "red", main = "Daily Step Histogram", xlab = "Date", ylab = "Daily Steps")
+
+abline(h = mean(dailysumm$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
 ```
 
 From the histrogram we can see there are a total of ten days with zero steps recorded. Looking at a summary of our data table we see the following:
@@ -64,3 +69,85 @@ The median steps taken on a daily basis is **10,395** while the mean steps taken
 
 ## What is the average daily activity pattern?
 
+We'll make use of `dplyr` again but this time to look at the 5-minute interval information.
+```{r}
+fiveminsumm <- summarize(group_by(activity, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+plot(fiveminsumm$interval, fiveminsumm$mean.steps, type = "l", lwd=2, col = "blue", main = "Average Steps Taken by Interval", xlab = "Interval", ylab = "Average Steps")
+abline(h = mean(fiveminsumm$mean.steps, na.rm = TRUE), lwd = 2, col = "red")
+```
+
+Based on what we're seeing, the time interval with the maximum average steps is in between 500 and 1,000.  Specifically, we see it's interval:
+
+```{r}
+paste("Interval with maxiumum value is", fiveminsumm$interval[which(fiveminsumm$mean.steps == max(fiveminsumm$mean.steps))])
+```
+
+And the maximum value of these steps is:
+
+```{r}
+max(fiveminsumm$mean.steps)
+```
+
+## Imputing missing values
+
+As observed above, 4.37% of the data are missing values.
+
+```{r}
+paste("There are", sum(is.na(activity$steps)), "observations with missing values.")
+```
+
+In the `fiveminsumm` dataset, we already calculated the average of the 5-minute interval across all 61 days with the `NA` values removed.  We can now use that to easily impute the missing values into a new R object.
+
+```{r}
+naList <- which(is.na(activity$steps))
+activity_imputed <- activity
+activity_imputed[naList,"steps"] <- fiveminsumm[naList,"mean.steps"]
+```
+
+Let's take a look at the impact of imputing these values.  Since we are filling in the values with the means we don't need to worry about ranges.  These won't be impacted.  We can view the graphs side-by-side and make comparisons by eyeballing.
+
+```{r}
+
+dailysumm_imp <- summarize(group_by(activity_imputed, date), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+par(mfrow=c(1,2))
+plot(dailysumm$date, dailysumm$total.steps, type = "h", lwd = 4, col = "red", main = "Daily Step Histogram", xlab = "Date", ylab = "Daily Steps")
+
+abline(h = mean(dailysumm$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
+
+plot(dailysumm_imp$date, dailysumm_imp$total.steps, type = "h", lwd = 4, col = "green", main = "Daily Step Histogram (Imputed)", xlab = "Date", ylab = "Daily Steps")
+
+abline(h = mean(dailysumm_imp$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
+```
+
+Let's look at a summary of these two values.
+
+```{r}
+summary(dailysumm)
+summary(dailysumm_imp)
+```
+
+You can see mean and median steps reported above.  What we see is there has been a modest shift upward in both the mean and median values of the total daily steps as a result of imputing the missing values.
+
+## Are there differences in activity patterns between weekdays and wekends?
+
+For this section we will be using the imputed data but we'll be appending the weekday information.
+
+```{r}
+for (i in 1:nrow(activity_imputed)) {
+    if (weekdays(activity_imputed[i,2]) == "Saturday" | weekdays(activity_imputed[i,2]) == "Sunday" ) {
+        activity_imputed$weekday = "weekend"
+    }
+    else {
+        activity_imputed$weekday = "weekday"
+    }
+}
+activity_imputed$weekday <- as.factor(activity_imputed$weekday)
+```
+
+
+```{r}
+
+weekday <- filter(activity_imputed, weekday == "weekday")
+weekend <- filter(activity_imputed, weekday == "weekend")
+fms_weekday <- summarize(group_by(weekday, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+fms_weekend <- summarize(group_by(weekday, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
