@@ -109,12 +109,12 @@ Let's take a look at the impact of imputing these values.  Since we are filling 
 ```{r}
 
 dailysumm_imp <- summarize(group_by(activity_imputed, date), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
-par(mfrow=c(1,2))
-plot(dailysumm$date, dailysumm$total.steps, type = "h", lwd = 4, col = "red", main = "Daily Step Histogram", xlab = "Date", ylab = "Daily Steps")
+par(layout(matrix(c(1,2), nrow = 1, ncol = 2)))
+plot(dailysumm$date, dailysumm$total.steps, type = "h", lwd = 1, col = "red", main = "Daily Step Histogram", xlab = "Date", ylab = "Daily Steps")
 
 abline(h = mean(dailysumm$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
 
-plot(dailysumm_imp$date, dailysumm_imp$total.steps, type = "h", lwd = 4, col = "green", main = "Daily Step Histogram (Imputed)", xlab = "Date", ylab = "Daily Steps")
+plot(dailysumm_imp$date, dailysumm_imp$total.steps, type = "h", lwd = 1, col = "green", main = "Daily Step Histogram (Imputed)", xlab = "Date", ylab = "Daily Steps")
 
 abline(h = mean(dailysumm_imp$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
 ```
@@ -133,21 +133,23 @@ You can see mean and median steps reported above.  What we see is there has been
 For this section we will be using the imputed data but we'll be appending the weekday information.
 
 ```{r}
-for (i in 1:nrow(activity_imputed)) {
-    if (weekdays(activity_imputed[i,2]) == "Saturday" | weekdays(activity_imputed[i,2]) == "Sunday" ) {
-        activity_imputed$weekday = "weekend"
-    }
-    else {
-        activity_imputed$weekday = "weekday"
-    }
-}
+activity_imputed <- mutate(activity_imputed, weekday = weekdays(date))
 activity_imputed$weekday <- as.factor(activity_imputed$weekday)
+weekend <- filter(activity_imputed, weekday == "Saturday" | weekday == "Sunday" )
+weekday <- filter(activity_imputed, weekday == "Monday" | weekday == "Tuesday" | weekday == "Wednesday" | weekday == "Thursday" | weekday == "Friday")
 ```
 
+Lastly, let's plot the two imputed vectors against the time intervals to see what we get.
 
 ```{r}
-
-weekday <- filter(activity_imputed, weekday == "weekday")
-weekend <- filter(activity_imputed, weekday == "weekend")
 fms_weekday <- summarize(group_by(weekday, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
-fms_weekend <- summarize(group_by(weekday, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+fms_weekend <- summarize(group_by(weekend, interval), total.steps = sum(steps, na.rm = TRUE), mean.steps = mean(steps, na.rm = TRUE))
+par(mfcol = c(2,1))
+plot(fms_weekday$interval, fms_weekday$total.steps, type = "l", lwd = 2, col = "red", main = "Weekday Total Steps by Day (Imputed)", xlab = "Time Interval", ylab = "Daily Steps")
+abline(h = mean(fms_weekday$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
+
+plot(fms_weekend$interval, fms_weekend$total.steps, type = "l", lwd = 2, col = "green", main = "Weekend Total Steps by Day (Imputed)", xlab = "Time Interval", ylab = "Daily Steps")
+abline(h = mean(fms_weekend$total.steps, rm.na = TRUE), lwd = 3, col = "blue")
+```
+
+It definitely looks like there are many more steps taken over the weekend versus the weekday.
